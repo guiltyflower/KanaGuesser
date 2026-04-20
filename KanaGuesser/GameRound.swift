@@ -170,6 +170,7 @@ struct GameRoundView: View {
 
                 DrawingCanvas(drawing: $drawing)
                     .padding(16)
+                    .id(index)
             }
 
             HStack(spacing: 12) {
