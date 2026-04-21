@@ -5,9 +5,11 @@ struct LearnView: View {
     let onExit: () -> Void
 
     static let roundSize = 10
+    static let retryRepeats = 3
 
     private enum Phase {
         case initial
+        case retryReady(initialCorrect: Int, wrongs: [Kana])
         case retry(initialCorrect: Int)
         case finished(initialCorrect: Int, retry: RetrySummary?)
     }
@@ -20,6 +22,8 @@ struct LearnView: View {
     @State private var sequence: [Kana]
     @State private var phase: Phase = .initial
     @State private var roundID = UUID()
+
+    @Environment(LanguageStore.self) private var lang
 
     init(scripts: Set<Script>, onExit: @escaping () -> Void) {
         self.scripts = scripts
@@ -34,18 +38,28 @@ struct LearnView: View {
                 kanaSequence: sequence,
                 playerLabel: nil,
                 onExit: onExit
-            ) { correct, wrongs in
-                handleInitialFinish(correct: correct, wrongs: wrongs)
+            ) { correct, outcomes in
+                handleInitialFinish(correct: correct, outcomes: outcomes)
             }
             .id(roundID)
+
+        case .retryReady(let initialCorrect, let wrongs):
+            RetryReadyView(
+                initialCorrect: initialCorrect,
+                total: Self.roundSize,
+                wrongCount: wrongs.count,
+                onExit: onExit,
+                onStart: { beginRetry(initialCorrect: initialCorrect, wrongs: wrongs) }
+            )
+            .padding(24)
 
         case .retry:
             GameRoundView(
                 kanaSequence: sequence,
-                playerLabel: "Ripasso",
+                playerLabel: lang.tr(.gameReview),
                 onExit: onExit
-            ) { _, wrongs in
-                handleRetryFinish(wrongs: wrongs)
+            ) { _, outcomes in
+                handleRetryFinish(outcomes: outcomes)
             }
             .id(roundID)
 
@@ -61,26 +75,62 @@ struct LearnView: View {
         }
     }
 
-    private func handleInitialFinish(correct: Int, wrongs: [Kana]) {
+    private func handleInitialFinish(correct: Int, outcomes: [Bool]) {
+        let wrongs: [Kana] = zip(sequence, outcomes).compactMap { $0.1 ? nil : $0.0 }
         if wrongs.isEmpty {
             withAnimation(.spring(response: 0.4)) {
                 phase = .finished(initialCorrect: correct, retry: nil)
             }
         } else {
-            sequence = wrongs.shuffled()
-            roundID = UUID()
             withAnimation(.easeInOut(duration: 0.25)) {
-                phase = .retry(initialCorrect: correct)
+                phase = .retryReady(initialCorrect: correct, wrongs: wrongs)
             }
         }
     }
 
-    private func handleRetryFinish(wrongs: [Kana]) {
+    private func beginRetry(initialCorrect: Int, wrongs: [Kana]) {
+        // Ripassiamo ogni kana sbagliato `retryRepeats` volte: N passate indipendentemente
+        // mescolate, concatenate. Se due passate confinano con lo stesso kana, scambiamo
+        // il primo elemento della seconda con il successivo per evitare doppioni immediati.
+        var passes = (0..<Self.retryRepeats).map { _ in wrongs.shuffled() }
+        var result: [Kana] = []
+        for p in passes.indices {
+            if let last = result.last,
+               passes[p].count >= 2,
+               passes[p][0] == last {
+                passes[p].swapAt(0, 1)
+            }
+            result.append(contentsOf: passes[p])
+        }
+        sequence = result
+        roundID = UUID()
+        withAnimation(.easeInOut(duration: 0.25)) {
+            phase = .retry(initialCorrect: initialCorrect)
+        }
+    }
+
+    private func handleRetryFinish(outcomes: [Bool]) {
         guard case .retry(let initialCorrect) = phase else { return }
-        let summary = RetrySummary(total: sequence.count, stillWrong: wrongs.count)
+
+        // Raggruppa gli esiti per kana, nell'ordine in cui sono apparsi nella sequenza.
+        var perKana: [Kana: [Bool]] = [:]
+        for (k, ok) in zip(sequence, outcomes) {
+            perKana[k, default: []].append(ok)
+        }
+
+        // Un kana è recuperato se: almeno 2 corretti su 3 E l'ultima risposta è giusta.
+        let uniqueCount = perKana.count
+        let recovered = perKana.values.filter(Self.isRecovered).count
+
+        let summary = RetrySummary(total: uniqueCount, stillWrong: uniqueCount - recovered)
         withAnimation(.spring(response: 0.4)) {
             phase = .finished(initialCorrect: initialCorrect, retry: summary)
         }
+    }
+
+    private static func isRecovered(_ outcomes: [Bool]) -> Bool {
+        guard outcomes.last == true else { return false }
+        return outcomes.filter { $0 }.count >= 2
     }
 
     private func startNewRound() {
@@ -96,6 +146,8 @@ struct ResultsView: View {
     let retry: LearnView.RetrySummary?
     let onNewRound: () -> Void
     let onExit: () -> Void
+
+    @Environment(LanguageStore.self) private var lang
 
     var body: some View {
         let percent = total > 0 ? Int(Double(correct) / Double(total) * 100) : 0
@@ -115,7 +167,7 @@ struct ResultsView: View {
 
             VStack(spacing: 12) {
                 Button(action: onNewRound) {
-                    Label("Nuovo round", systemImage: "arrow.clockwise")
+                    Label(lang.tr(.resultNewRound), systemImage: "arrow.clockwise")
                         .font(.title3.bold())
                         .frame(maxWidth: 320)
                         .padding(.vertical, 6)
@@ -124,7 +176,7 @@ struct ResultsView: View {
                 .controlSize(.large)
 
                 Button(action: onExit) {
-                    Label("Menu", systemImage: "house")
+                    Label(lang.tr(.resultMenu), systemImage: "house")
                         .font(.headline)
                         .frame(maxWidth: 320)
                         .padding(.vertical, 4)
@@ -146,13 +198,13 @@ struct ResultsView: View {
     private func retryCard(_ retry: LearnView.RetrySummary) -> some View {
         let recovered = retry.total - retry.stillWrong
         return VStack(spacing: 6) {
-            Text("Ripasso")
+            Text(lang.tr(.resultReviewHeading))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text("\(recovered) / \(retry.total) recuperati")
+            Text(lang.tr(.resultReviewRecovered, recovered, retry.total))
                 .font(.headline.monospacedDigit())
             if retry.stillWrong > 0 {
-                Text("Ancora \(retry.stillWrong) da rivedere")
+                Text(lang.tr(.resultReviewStill, retry.stillWrong))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -167,10 +219,70 @@ struct ResultsView: View {
 
     private func resultCopy(for score: Int, total: Int) -> (String, String) {
         switch score {
-        case total: return ("🎉", "Perfetto!")
-        case (total - 2)...: return ("🔥", "Ottimo!")
-        case (total / 2)...: return ("👍", "Bene")
-        default: return ("💪", "Continua ad allenarti")
+        case total: return ("🎉", lang.tr(.resultPerfect))
+        case (total - 2)...: return ("🔥", lang.tr(.resultGreat))
+        case (total / 2)...: return ("👍", lang.tr(.resultGood))
+        default: return ("💪", lang.tr(.resultKeepGoing))
+        }
+    }
+}
+
+private struct RetryReadyView: View {
+    let initialCorrect: Int
+    let total: Int
+    let wrongCount: Int
+    let onExit: () -> Void
+    let onStart: () -> Void
+
+    @Environment(LanguageStore.self) private var lang
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 20) {
+                Spacer()
+
+                Text("📝").font(.system(size: 72))
+                Text(lang.tr(.resultReviewHeading))
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.accentColor)
+
+                VStack(spacing: 6) {
+                    Text(lang.tr(.retryReadyScore, initialCorrect, total))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(lang.tr(.retryReadyCount, wrongCount))
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 24)
+
+                Button(action: onStart) {
+                    Label(lang.tr(.retryReadyStart), systemImage: "play.fill")
+                        .font(.title3.bold())
+                        .frame(maxWidth: 320)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .padding(.top, 8)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+
+            Button(action: onExit) {
+                Image(systemName: "xmark")
+                    .font(.subheadline.weight(.bold))
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(Color(.tertiarySystemFill)))
+                    .foregroundStyle(.primary)
+            }
+            .buttonStyle(.plain)
+            .padding(16)
         }
     }
 }

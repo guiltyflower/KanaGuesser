@@ -5,13 +5,18 @@ struct GameRoundView: View {
     let kanaSequence: [Kana]
     let playerLabel: String?
     let onExit: () -> Void
-    let onFinished: (_ correct: Int, _ wrongs: [Kana]) -> Void
+    /// `outcomes[i]` è `true` se l'utente ha risposto correttamente alla i-esima domanda
+    /// della `kanaSequence`. Il caller può così dedurre i kana sbagliati e calcolare
+    /// statistiche per-kana (es. regole di recupero nel ripasso).
+    let onFinished: (_ correct: Int, _ outcomes: [Bool]) -> Void
 
     @State private var index = 0
     @State private var drawing = PKDrawing()
     @State private var revealed = false
     @State private var correct = 0
-    @State private var wrongs: [Kana] = []
+    @State private var outcomes: [Bool] = []
+
+    @Environment(LanguageStore.self) private var lang
 
     private var current: Kana { kanaSequence[index] }
     private var total: Int { kanaSequence.count }
@@ -41,13 +46,13 @@ struct GameRoundView: View {
             header
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Disegna il")
+                Text(lang.tr(.gameDrawThe))
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 Text(current.script.rawValue)
                     .font(.system(size: 44, weight: .heavy, design: .rounded))
                     .foregroundStyle(current.script == .hiragana ? Color.pink : Color.blue)
-                Text("di")
+                Text(lang.tr(.gameConnector))
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 Text("\"\(current.romaji)\"")
@@ -94,7 +99,7 @@ struct GameRoundView: View {
                     .foregroundStyle(.secondary)
             }
             progressBar
-            Text("\(correct) corrette")
+            Text(lang.tr(.gameCorrectCount, correct))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -114,7 +119,7 @@ struct GameRoundView: View {
 
     private var revealCard: some View {
         VStack(spacing: 12) {
-            Text("Risposta")
+            Text(lang.tr(.gameAnswer))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(current.character)
@@ -123,7 +128,7 @@ struct GameRoundView: View {
                 Button {
                     grade(correct: false)
                 } label: {
-                    Label("Sbagliato", systemImage: "xmark")
+                    Label(lang.tr(.gameWrong), systemImage: "xmark")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -132,7 +137,7 @@ struct GameRoundView: View {
                 Button {
                     grade(correct: true)
                 } label: {
-                    Label("Giusto", systemImage: "checkmark")
+                    Label(lang.tr(.gameRight), systemImage: "checkmark")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -177,7 +182,7 @@ struct GameRoundView: View {
                 Button {
                     drawing = PKDrawing()
                 } label: {
-                    Label("Pulisci", systemImage: "eraser")
+                    Label(lang.tr(.gameClear), systemImage: "eraser")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -186,7 +191,7 @@ struct GameRoundView: View {
                     Button {
                         withAnimation(.spring(response: 0.35)) { revealed = true }
                     } label: {
-                        Label("Mostra risposta", systemImage: "eye")
+                        Label(lang.tr(.gameShowAnswer), systemImage: "eye")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -197,15 +202,12 @@ struct GameRoundView: View {
     }
 
     private func grade(correct wasCorrect: Bool) {
-        if wasCorrect {
-            correct += 1
-        } else {
-            wrongs.append(current)
-        }
+        outcomes.append(wasCorrect)
+        if wasCorrect { correct += 1 }
         drawing = PKDrawing()
         revealed = false
         if index + 1 >= total {
-            onFinished(correct, wrongs)
+            onFinished(correct, outcomes)
         } else {
             index += 1
         }

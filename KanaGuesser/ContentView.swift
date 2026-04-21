@@ -1,3 +1,8 @@
+//
+//  ContentView.swift
+//  KanaGuesser
+//
+
 import SwiftUI
 
 enum AppMode {
@@ -8,105 +13,87 @@ enum AppMode {
 
 struct ContentView: View {
     @State private var mode: AppMode = .menu
-    @State private var selectedScripts: Set<Script> = [.hiragana, .katakana]
+    @State private var showSettings = false
+
+    @Environment(PreferencesStore.self) private var prefs
 
     var body: some View {
         Group {
             switch mode {
             case .menu:
                 MenuView(
-                    selectedScripts: $selectedScripts,
                     onLearn: { mode = .learn },
-                    onMultiplayer: { mode = .multiplayer }
+                    onMultiplayer: { mode = .multiplayer },
+                    onSettings: { showSettings = true }
                 )
             case .learn:
-                LearnView(scripts: selectedScripts) { mode = .menu }
+                LearnView(scripts: prefs.selectedScripts) { mode = .menu }
             case .multiplayer:
-                MultiplayerView(scripts: selectedScripts) { mode = .menu }
+                MultiplayerView(scripts: prefs.selectedScripts) { mode = .menu }
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
     }
 }
 
 private struct MenuView: View {
-    @Binding var selectedScripts: Set<Script>
     let onLearn: () -> Void
     let onMultiplayer: () -> Void
+    let onSettings: () -> Void
+
+    @Environment(LanguageStore.self) private var lang
 
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 28) {
+                Spacer()
 
-            VStack(spacing: 6) {
-                Text("KanaGuesser")
-                    .font(.system(size: 42, weight: .heavy, design: .rounded))
-                Text("Scegli una modalità")
-                    .font(.subheadline)
+                VStack(spacing: 6) {
+                    Text("KanaGuesser")
+                        .font(.system(size: 42, weight: .heavy, design: .rounded))
+                    Text(lang.tr(.menuSubtitle))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 14) {
+                    modeButton(
+                        title: lang.tr(.modeLearnTitle),
+                        subtitle: lang.tr(.modeLearnSubtitle),
+                        system: "book.fill",
+                        tint: .accentColor,
+                        action: onLearn
+                    )
+
+                    modeButton(
+                        title: lang.tr(.modeChallengeTitle),
+                        subtitle: lang.tr(.modeChallengeSubtitle),
+                        system: "person.2.fill",
+                        tint: .orange,
+                        action: onMultiplayer
+                    )
+                }
+                .padding(.horizontal, 8)
+
+                Spacer()
+            }
+            .padding(24)
+
+            Button(action: onSettings) {
+                Image(systemName: "gearshape.fill")
+                    .font(.title3)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color(.secondarySystemGroupedBackground)))
                     .foregroundStyle(.secondary)
             }
-
-            scriptSelector
-                .padding(.top, 4)
-
-            VStack(spacing: 14) {
-                modeButton(
-                    title: "Impara",
-                    subtitle: "Allenati da solo",
-                    system: "book.fill",
-                    tint: .accentColor,
-                    action: onLearn
-                )
-
-                modeButton(
-                    title: "Sfida",
-                    subtitle: "2 giocatori a turni",
-                    system: "person.2.fill",
-                    tint: .orange,
-                    action: onMultiplayer
-                )
-            }
-            .padding(.horizontal, 8)
-
-            Spacer()
+            .buttonStyle(.plain)
+            .padding(.top, 12)
+            .padding(.trailing, 16)
+            .accessibilityLabel(lang.tr(.settingsTitle))
         }
-        .padding(24)
-    }
-
-    private var scriptSelector: some View {
-        VStack(spacing: 8) {
-            Text("Alfabeti")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack(spacing: 8) {
-                ForEach(Script.allCases) { script in
-                    let on = selectedScripts.contains(script)
-                    Button {
-                        toggle(script)
-                    } label: {
-                        Text(script.label)
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(
-                                Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill))
-                            )
-                            .foregroundStyle(on ? Color.white : Color.primary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    private func toggle(_ script: Script) {
-        var next = selectedScripts
-        if next.contains(script) {
-            if next.count > 1 { next.remove(script) }
-        } else {
-            next.insert(script)
-        }
-        selectedScripts = next
     }
 
     private func modeButton(
@@ -152,4 +139,6 @@ private struct MenuView: View {
 
 #Preview {
     ContentView()
+        .environment(LanguageStore())
+        .environment(PreferencesStore())
 }

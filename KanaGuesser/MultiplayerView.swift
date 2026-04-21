@@ -16,6 +16,8 @@ struct MultiplayerView: View {
     @State private var sequence: [Kana]
     @State private var roundID = UUID()
 
+    @Environment(LanguageStore.self) private var lang
+
     init(scripts: Set<Script>, onExit: @escaping () -> Void) {
         self.scripts = scripts
         self.onExit = onExit
@@ -46,7 +48,7 @@ struct MultiplayerView: View {
         case .playing(let player, let p1Score):
             GameRoundView(
                 kanaSequence: sequence,
-                playerLabel: "Giocatore \(player)",
+                playerLabel: lang.tr(.mpPlayer, player),
                 onExit: onExit
             ) { score, _ in
                 withAnimation(.spring(response: 0.4)) {
@@ -85,21 +87,23 @@ private struct ReadyView: View {
     let onExit: () -> Void
     let onStart: () -> Void
 
+    @Environment(LanguageStore.self) private var lang
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 20) {
                 Spacer()
 
-                Text("Tocca al")
+                Text(lang.tr(.mpTurnOf))
                     .font(.title3)
                     .foregroundStyle(.secondary)
-                Text("Giocatore \(player)")
+                Text(lang.tr(.mpPlayer, player))
                     .font(.system(size: 56, weight: .heavy, design: .rounded))
                     .foregroundStyle(player == 1 ? Color.pink : Color.blue)
 
                 if let previousScore {
                     VStack(spacing: 6) {
-                        Text("Giocatore 1 ha fatto")
+                        Text(lang.tr(.mpPlayerGot, 1))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("\(previousScore) / \(total)")
@@ -113,7 +117,7 @@ private struct ReadyView: View {
                     )
                     .padding(.horizontal, 8)
                 } else {
-                    Text("Disegnerai \(total) kana. Poi toccherà al Giocatore 2.")
+                    Text(lang.tr(.mpIntro, total))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -121,10 +125,13 @@ private struct ReadyView: View {
                 }
 
                 Button(action: onStart) {
-                    Label(player == 1 ? "Inizia" : "Avanti", systemImage: "play.fill")
-                        .font(.title3.bold())
-                        .frame(maxWidth: 320)
-                        .padding(.vertical, 6)
+                    Label(
+                        player == 1 ? lang.tr(.mpStart) : lang.tr(.mpNext),
+                        systemImage: "play.fill"
+                    )
+                    .font(.title3.bold())
+                    .frame(maxWidth: 320)
+                    .padding(.vertical, 6)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
@@ -158,6 +165,8 @@ private struct MultiplayerResultsView: View {
     let onRematch: () -> Void
     let onExit: () -> Void
 
+    @Environment(LanguageStore.self) private var lang
+
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
@@ -170,13 +179,13 @@ private struct MultiplayerResultsView: View {
 
             HStack(spacing: 16) {
                 scoreCard(
-                    name: "Giocatore 1",
+                    name: lang.tr(.mpPlayer, 1),
                     score: player1Score,
                     tint: .pink,
                     highlight: player1Score > player2Score
                 )
                 scoreCard(
-                    name: "Giocatore 2",
+                    name: lang.tr(.mpPlayer, 2),
                     score: player2Score,
                     tint: .blue,
                     highlight: player2Score > player1Score
@@ -186,7 +195,7 @@ private struct MultiplayerResultsView: View {
 
             VStack(spacing: 12) {
                 Button(action: onRematch) {
-                    Label("Rivincita", systemImage: "arrow.clockwise")
+                    Label(lang.tr(.mpRematch), systemImage: "arrow.clockwise")
                         .font(.title3.bold())
                         .frame(maxWidth: 320)
                         .padding(.vertical, 6)
@@ -195,7 +204,7 @@ private struct MultiplayerResultsView: View {
                 .controlSize(.large)
 
                 Button(action: onExit) {
-                    Label("Menu", systemImage: "house")
+                    Label(lang.tr(.resultMenu), systemImage: "house")
                         .font(.headline)
                         .frame(maxWidth: 320)
                         .padding(.vertical, 4)
@@ -220,8 +229,9 @@ private struct MultiplayerResultsView: View {
     }
 
     private var title: String {
-        if player1Score == player2Score { return "Pareggio!" }
-        return player1Score > player2Score ? "Vince il Giocatore 1" : "Vince il Giocatore 2"
+        if player1Score == player2Score { return lang.tr(.mpTie) }
+        let winner = player1Score > player2Score ? 1 : 2
+        return lang.tr(.mpWinner, winner)
     }
 
     private func scoreCard(name: String, score: Int, tint: Color, highlight: Bool) -> some View {
@@ -231,7 +241,7 @@ private struct MultiplayerResultsView: View {
                 .foregroundStyle(tint)
             Text("\(score)")
                 .font(.system(size: 48, weight: .heavy, design: .rounded).monospacedDigit())
-            Text("su \(total)")
+            Text(lang.tr(.mpOutOf, total))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

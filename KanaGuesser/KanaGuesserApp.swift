@@ -9,9 +9,14 @@ import SwiftUI
 
 @main
 struct KanaGuesserApp: App {
+    @State private var languageStore = LanguageStore()
+    @State private var preferencesStore = PreferencesStore()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(languageStore)
+                .environment(preferencesStore)
         }
     }
 }
