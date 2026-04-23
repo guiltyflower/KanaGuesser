@@ -106,15 +106,21 @@ struct GameRoundView: View {
     }
 
     private var progressBar: some View {
-        GeometryReader { g in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color(.tertiarySystemFill))
-                Capsule()
-                    .fill(Color.accentColor)
-                    .frame(width: g.size.width * CGFloat(index) / CGFloat(total))
+        HStack(spacing: 3) {
+            ForEach(0..<total, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(segmentColor(at: i))
+                    .frame(maxWidth: .infinity)
             }
         }
         .frame(height: 8)
+    }
+
+    private func segmentColor(at i: Int) -> Color {
+        if i < outcomes.count {
+            return outcomes[i] ? .green : .red
+        }
+        return Color(.tertiarySystemFill)
     }
 
     private var revealCard: some View {

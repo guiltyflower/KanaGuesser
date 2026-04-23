@@ -32,7 +32,12 @@ struct ContentView: View {
                 MultiplayerView(scripts: prefs.selectedScripts) { mode = .menu }
             }
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(
+            Image("KanaBackground")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+        )
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
