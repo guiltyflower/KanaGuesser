@@ -27,7 +27,7 @@ struct MultiplayerView: View {
     var body: some View {
         switch phase {
         case .ready(let player, let previousScore):
-            ReadyView(
+            MultiplayerReadyView(
                 player: player,
                 previousScore: previousScore,
                 total: Self.roundSize,
@@ -43,7 +43,6 @@ struct MultiplayerView: View {
                     }
                 }
             )
-            .padding(24)
 
         case .playing(let player, let p1Score):
             GameRoundView(
@@ -62,14 +61,13 @@ struct MultiplayerView: View {
             .id(roundID)
 
         case .finished(let p1, let p2):
-            MultiplayerResultsView(
+            ChallengeFinalView(
                 player1Score: p1,
                 player2Score: p2,
                 total: Self.roundSize,
                 onRematch: startRematch,
                 onExit: onExit
             )
-            .padding(24)
         }
     }
 
@@ -80,7 +78,9 @@ struct MultiplayerView: View {
     }
 }
 
-private struct ReadyView: View {
+// MARK: - Pass / Ready screen (between players or intro)
+
+private struct MultiplayerReadyView: View {
     let player: Int
     let previousScore: Int?
     let total: Int
@@ -91,74 +91,96 @@ private struct ReadyView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            VStack(spacing: 20) {
+            VStack {
                 Spacer()
-
-                Text(lang.tr(.mpTurnOf))
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                Text(lang.tr(.mpPlayer, player))
-                    .font(.system(size: 56, weight: .heavy, design: .rounded))
-                    .foregroundStyle(player == 1 ? Color.pink : Color.blue)
-
-                if let previousScore {
-                    VStack(spacing: 6) {
-                        Text(lang.tr(.mpPlayerGot, 1))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("\(previousScore) / \(total)")
-                            .font(.title.monospacedDigit().bold())
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(Color(.secondarySystemGroupedBackground))
-                    )
-                    .padding(.horizontal, 8)
-                } else {
-                    Text(lang.tr(.mpIntro, total))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
-
-                Button(action: onStart) {
-                    Label(
-                        player == 1 ? lang.tr(.mpStart) : lang.tr(.mpNext),
-                        systemImage: "play.fill"
-                    )
-                    .font(.title3.bold())
-                    .frame(maxWidth: 320)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.top, 8)
-
+                card
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: 400)
                 Spacer()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
 
-            Button(action: onExit) {
-                Image(systemName: "xmark")
-                    .font(.subheadline.weight(.bold))
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color(.tertiarySystemFill)))
-                    .foregroundStyle(.primary)
-            }
-            .buttonStyle(.plain)
-            .padding(16)
+            PillIconButton(systemImage: "xmark", size: 36, iconSize: 13, action: onExit)
+                .padding(.leading, 16)
+                .padding(.top, 12)
         }
+    }
+
+    @ViewBuilder
+    private var card: some View {
+        VStack(spacing: 0) {
+            KGLabel(text: previousScore == nil ? lang.tr(.mpStart) : lang.tr(.mpTurnEnded))
+                .padding(.top, 32)
+
+            Text(titleText)
+                .font(KG.F.section)
+                .tracking(-0.8)
+                .foregroundStyle(KG.C.textPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.top, 6)
+
+            passBox
+                .padding(.horizontal, 24)
+                .padding(.top, 22)
+
+            KGButton(variant: .primary, action: onStart) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14, weight: .bold))
+                Text(ctaText)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 22)
+            .padding(.bottom, 28)
+        }
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(KG.C.card)
+        )
+        .kgCardShadow(lifted: true)
+    }
+
+    private var titleText: String {
+        guard let previousScore else {
+            return lang.tr(.mpIntro, total)
+        }
+        return "\(lang.tr(.mpPlayer, 1)): \(previousScore)/\(total)"
+    }
+
+    @ViewBuilder
+    private var passBox: some View {
+        if previousScore != nil {
+            VStack(spacing: 4) {
+                Text(lang.tr(.mpPassDevice))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(KG.C.textSecondary)
+                Text(lang.tr(.mpPlayer, player))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .tracking(-0.4)
+                    .foregroundStyle(KG.C.orange)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(EdgeInsets(top: 18, leading: 16, bottom: 18, trailing: 16))
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(KG.C.bgCream)
+            )
+        } else {
+            EmptyView()
+        }
+    }
+
+    private var ctaText: String {
+        if previousScore == nil {
+            return lang.tr(.mpStart)
+        }
+        return lang.tr(.mpStartTurn, string: lang.tr(.mpPlayer, player))
     }
 }
 
-private struct MultiplayerResultsView: View {
+// MARK: - Challenge final
+
+private struct ChallengeFinalView: View {
     let player1Score: Int
     let player2Score: Int
     let total: Int
@@ -167,93 +189,119 @@ private struct MultiplayerResultsView: View {
 
     @Environment(LanguageStore.self) private var lang
 
+    private var winner: Int {
+        if player1Score == player2Score { return 0 }
+        return player1Score > player2Score ? 1 : 2
+    }
+
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-
-            Text(headline)
-                .font(.system(size: 72))
-            Text(title)
-                .font(.largeTitle.bold())
-                .multilineTextAlignment(.center)
-
-            HStack(spacing: 16) {
-                scoreCard(
-                    name: lang.tr(.mpPlayer, 1),
-                    score: player1Score,
-                    tint: .pink,
-                    highlight: player1Score > player2Score
-                )
-                scoreCard(
-                    name: lang.tr(.mpPlayer, 2),
-                    score: player2Score,
-                    tint: .blue,
-                    highlight: player2Score > player1Score
-                )
-            }
-            .padding(.horizontal, 8)
-
-            VStack(spacing: 12) {
-                Button(action: onRematch) {
-                    Label(lang.tr(.mpRematch), systemImage: "arrow.clockwise")
-                        .font(.title3.bold())
-                        .frame(maxWidth: 320)
-                        .padding(.vertical, 6)
+        ZStack(alignment: .topLeading) {
+            ScrollView {
+                VStack(spacing: 30) {
+                    header
+                    HStack(spacing: 10) {
+                        PlayerScoreCard(
+                            player: 1,
+                            score: player1Score,
+                            total: total,
+                            isWinner: winner == 1
+                        )
+                        PlayerScoreCard(
+                            player: 2,
+                            score: player2Score,
+                            total: total,
+                            isWinner: winner == 2
+                        )
+                    }
+                    VStack(spacing: 10) {
+                        KGButton(variant: .primary, action: onRematch) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .bold))
+                            Text(lang.tr(.mpRematch))
+                        }
+                        KGButton(variant: .secondary, action: onExit) {
+                            Text(lang.tr(.resultMenu))
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-
-                Button(action: onExit) {
-                    Label(lang.tr(.resultMenu), systemImage: "house")
-                        .font(.headline)
-                        .frame(maxWidth: 320)
-                        .padding(.vertical, 4)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
+                .padding(.horizontal, 24)
+                .padding(.top, 100)
+                .padding(.bottom, 40)
             }
-            .padding(.top, 8)
 
-            Spacer()
+            PillIconButton(systemImage: "xmark", size: 36, iconSize: 13, action: onExit)
+                .padding(.leading, 16)
+                .padding(.top, 12)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
     }
 
-    private var headline: String {
-        if player1Score == player2Score { return "🤝" }
-        return "🏆"
+    private var header: some View {
+        VStack(spacing: 10) {
+            KGLabel(text: lang.tr(.mpChallengeDone))
+            Text(winnerText)
+                .font(.system(size: 42, weight: .black, design: .rounded))
+                .tracking(-1.2)
+                .foregroundStyle(KG.C.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+        }
     }
 
-    private var title: String {
-        if player1Score == player2Score { return lang.tr(.mpTie) }
-        let winner = player1Score > player2Score ? 1 : 2
+    private var winnerText: String {
+        if winner == 0 { return lang.tr(.mpTie) }
         return lang.tr(.mpWinner, winner)
     }
+}
 
-    private func scoreCard(name: String, score: Int, tint: Color, highlight: Bool) -> some View {
-        VStack(spacing: 8) {
-            Text(name)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
-            Text("\(score)")
-                .font(.system(size: 48, weight: .heavy, design: .rounded).monospacedDigit())
-            Text(lang.tr(.mpOutOf, total))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+private struct PlayerScoreCard: View {
+    let player: Int
+    let score: Int
+    let total: Int
+    let isWinner: Bool
+
+    @Environment(LanguageStore.self) private var lang
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            VStack(spacing: 0) {
+                KGLabel(text: lang.tr(.mpPlayer, player))
+                    .padding(.top, 18)
+                Text("\(score)")
+                    .font(.system(size: 40, weight: .black, design: .rounded))
+                    .tracking(-1)
+                    .foregroundStyle(KG.C.textPrimary)
+                    .padding(.top, 6)
+                Text("/ \(total)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(KG.C.textTertiary)
+                    .padding(.top, 2)
+                    .padding(.bottom, 18)
+            }
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(KG.C.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isWinner ? KG.C.orange : .clear, lineWidth: 2)
+            )
+            .shadow(
+                color: isWinner ? KG.C.orange.opacity(0.3) : Color.black.opacity(0.08),
+                radius: isWinner ? 16 : 8,
+                x: 0, y: isWinner ? 4 : 2
+            )
+
+            if isWinner {
+                Text(lang.tr(.mpWinnerBadge))
+                    .font(.system(size: 10, weight: .heavy))
+                    .tracking(0.6)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(KG.C.orange))
+                    .offset(y: -10)
+            }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(highlight ? tint : .clear, lineWidth: 2)
-        )
     }
 }

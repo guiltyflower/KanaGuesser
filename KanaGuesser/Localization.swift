@@ -42,15 +42,13 @@ enum LKey: String {
     case modeChallengeSubtitle
 
     // Game round
-    case gameDrawThe
-    case gameConnector
-    case gameCorrectCount       // "%d corrette"
-    case gameAnswer
-    case gameWrong
-    case gameRight
-    case gameClear
-    case gameShowAnswer
-    case gameReview             // header when in retry phase
+    case gameDrawChar           // "Disegna il carattere" — uppercase card label
+    case gameAnswer             // "Risposta corretta"
+    case gameWrong              // button "Sbagliato"
+    case gameRight              // button "Corretto"
+    case gameClear              // button "Cancella"
+    case gameShowAnswer         // button "Mostra risposta"
+    case gameReview             // top-bar label when in retry phase
 
     // Results
     case resultPerfect
@@ -59,6 +57,13 @@ enum LKey: String {
     case resultKeepGoing
     case resultNewRound
     case resultMenu
+    case resultRoundCompleted   // header "Round completato"
+    case resultTrainingDone     // header "Allenamento completato"
+    case resultGreatJob         // hero "Ottimo lavoro!"
+    case resultScoreFraction    // hero fraction: "%d su %d"
+    case resultReviewOneToGo    // "1 da ripassare"
+    case resultReviewManyToGo   // "%d da ripassare"
+    case resultYourCharacters   // grid header
     case resultReviewHeading
     case resultReviewRecovered  // "%d / %d recuperati"
     case resultReviewStill      // "Ancora %d da rivedere"
@@ -77,11 +82,28 @@ enum LKey: String {
     case mpWinner               // "Vince il Giocatore %d"
     case mpRematch
     case mpOutOf                // "su %d"
+    case mpTurnEnded            // "Turno concluso"
+    case mpPassDevice           // "Passa il dispositivo al"
+    case mpStartTurn            // "Inizia turno %@"
+    case mpChallengeDone        // "Sfida completata"
+    case mpWinnerBadge          // "VINCITORE"
 
     // Settings
     case settingsTitle
     case settingsLanguage
     case settingsDone
+    case settingsScriptsHeader  // uppercase "SILLABARI"
+    case settingsMatchHeader    // uppercase "PARTITA"
+    case settingsPrefsHeader    // uppercase "PREFERENZE"
+    case settingsLanguageHeader // uppercase "LINGUA"
+    case settingsRoundsTitle    // "Turni per round"
+    case settingsRoundsSub      // "Quanti caratteri disegnare"
+    case settingsRecoveryTitle  // "Ripassi caratteri sbagliati"
+    case settingsRecoverySub    // "Volte per memorizzare"
+    case settingsSounds
+    case settingsSoundsSub
+    case settingsHaptics
+    case settingsHapticsSub
 
     // Validation demo
     case valWrite
@@ -110,13 +132,11 @@ private let translations: [Language: [LKey: String]] = [
         .modeChallengeTitle: "Sfida",
         .modeChallengeSubtitle: "2 giocatori a turni",
 
-        .gameDrawThe: "Disegna il",
-        .gameConnector: "di",
-        .gameCorrectCount: "%d corrette",
-        .gameAnswer: "Risposta",
+        .gameDrawChar: "Disegna il carattere",
+        .gameAnswer: "Risposta corretta",
         .gameWrong: "Sbagliato",
-        .gameRight: "Giusto",
-        .gameClear: "Pulisci",
+        .gameRight: "Corretto",
+        .gameClear: "Cancella",
         .gameShowAnswer: "Mostra risposta",
         .gameReview: "Ripasso",
 
@@ -125,7 +145,14 @@ private let translations: [Language: [LKey: String]] = [
         .resultGood: "Bene",
         .resultKeepGoing: "Continua ad allenarti",
         .resultNewRound: "Nuovo round",
-        .resultMenu: "Menu",
+        .resultMenu: "Torna alla home",
+        .resultRoundCompleted: "Round completato",
+        .resultTrainingDone: "Allenamento completato",
+        .resultGreatJob: "Ottimo lavoro!",
+        .resultScoreFraction: "%d su %d",
+        .resultReviewOneToGo: "1 da ripassare",
+        .resultReviewManyToGo: "%d da ripassare",
+        .resultYourCharacters: "I tuoi caratteri",
         .resultReviewHeading: "Ripasso",
         .resultReviewRecovered: "%d / %d recuperati",
         .resultReviewStill: "Ancora %d da rivedere",
@@ -140,13 +167,30 @@ private let translations: [Language: [LKey: String]] = [
         .mpStart: "Inizia",
         .mpNext: "Avanti",
         .mpTie: "Pareggio!",
-        .mpWinner: "Vince il Giocatore %d",
+        .mpWinner: "Vince il\nGiocatore %d",
         .mpRematch: "Rivincita",
         .mpOutOf: "su %d",
+        .mpTurnEnded: "Turno concluso",
+        .mpPassDevice: "Passa il dispositivo al",
+        .mpStartTurn: "Inizia turno %@",
+        .mpChallengeDone: "Sfida completata",
+        .mpWinnerBadge: "VINCITORE",
 
         .settingsTitle: "Impostazioni",
         .settingsLanguage: "Lingua",
         .settingsDone: "Fine",
+        .settingsScriptsHeader: "SILLABARI",
+        .settingsMatchHeader: "PARTITA",
+        .settingsPrefsHeader: "PREFERENZE",
+        .settingsLanguageHeader: "LINGUA",
+        .settingsRoundsTitle: "Turni per round",
+        .settingsRoundsSub: "Quanti caratteri disegnare",
+        .settingsRecoveryTitle: "Ripassi caratteri sbagliati",
+        .settingsRecoverySub: "Volte per memorizzare",
+        .settingsSounds: "Suoni",
+        .settingsSoundsSub: "Feedback audio",
+        .settingsHaptics: "Vibrazione",
+        .settingsHapticsSub: "Feedback aptico",
 
         .valWrite: "Scrivi",
         .valStrokesCount: "%d tratti",
@@ -170,12 +214,10 @@ private let translations: [Language: [LKey: String]] = [
         .modeChallengeTitle: "Challenge",
         .modeChallengeSubtitle: "2 players, taking turns",
 
-        .gameDrawThe: "Draw the",
-        .gameConnector: "for",
-        .gameCorrectCount: "%d correct",
-        .gameAnswer: "Answer",
+        .gameDrawChar: "Draw the character",
+        .gameAnswer: "Correct answer",
         .gameWrong: "Wrong",
-        .gameRight: "Right",
+        .gameRight: "Correct",
         .gameClear: "Clear",
         .gameShowAnswer: "Show answer",
         .gameReview: "Review",
@@ -185,7 +227,14 @@ private let translations: [Language: [LKey: String]] = [
         .resultGood: "Nice",
         .resultKeepGoing: "Keep practicing",
         .resultNewRound: "New round",
-        .resultMenu: "Menu",
+        .resultMenu: "Back to home",
+        .resultRoundCompleted: "Round complete",
+        .resultTrainingDone: "Training complete",
+        .resultGreatJob: "Great job!",
+        .resultScoreFraction: "%d out of %d",
+        .resultReviewOneToGo: "1 to review",
+        .resultReviewManyToGo: "%d to review",
+        .resultYourCharacters: "Your characters",
         .resultReviewHeading: "Review",
         .resultReviewRecovered: "%d / %d recovered",
         .resultReviewStill: "%d still to review",
@@ -200,13 +249,30 @@ private let translations: [Language: [LKey: String]] = [
         .mpStart: "Start",
         .mpNext: "Next",
         .mpTie: "Tie!",
-        .mpWinner: "Player %d wins",
+        .mpWinner: "Player %d\nwins",
         .mpRematch: "Rematch",
         .mpOutOf: "out of %d",
+        .mpTurnEnded: "Turn complete",
+        .mpPassDevice: "Pass the device to",
+        .mpStartTurn: "Start %@'s turn",
+        .mpChallengeDone: "Challenge complete",
+        .mpWinnerBadge: "WINNER",
 
         .settingsTitle: "Settings",
         .settingsLanguage: "Language",
         .settingsDone: "Done",
+        .settingsScriptsHeader: "SYLLABARIES",
+        .settingsMatchHeader: "GAME",
+        .settingsPrefsHeader: "PREFERENCES",
+        .settingsLanguageHeader: "LANGUAGE",
+        .settingsRoundsTitle: "Turns per round",
+        .settingsRoundsSub: "How many characters to draw",
+        .settingsRecoveryTitle: "Reviews for missed characters",
+        .settingsRecoverySub: "Times to memorize",
+        .settingsSounds: "Sounds",
+        .settingsSoundsSub: "Audio feedback",
+        .settingsHaptics: "Haptics",
+        .settingsHapticsSub: "Haptic feedback",
 
         .valWrite: "Write",
         .valStrokesCount: "%d strokes",
@@ -230,12 +296,10 @@ private let translations: [Language: [LKey: String]] = [
         .modeChallengeTitle: "Défi",
         .modeChallengeSubtitle: "2 joueurs, à tour de rôle",
 
-        .gameDrawThe: "Dessine le",
-        .gameConnector: "pour",
-        .gameCorrectCount: "%d corrects",
-        .gameAnswer: "Réponse",
+        .gameDrawChar: "Dessine le caractère",
+        .gameAnswer: "Bonne réponse",
         .gameWrong: "Faux",
-        .gameRight: "Juste",
+        .gameRight: "Correct",
         .gameClear: "Effacer",
         .gameShowAnswer: "Voir la réponse",
         .gameReview: "Révision",
@@ -245,7 +309,14 @@ private let translations: [Language: [LKey: String]] = [
         .resultGood: "Bien",
         .resultKeepGoing: "Continue à t'entraîner",
         .resultNewRound: "Nouvelle partie",
-        .resultMenu: "Menu",
+        .resultMenu: "Retour à l'accueil",
+        .resultRoundCompleted: "Manche terminée",
+        .resultTrainingDone: "Entraînement terminé",
+        .resultGreatJob: "Bravo !",
+        .resultScoreFraction: "%d sur %d",
+        .resultReviewOneToGo: "1 à revoir",
+        .resultReviewManyToGo: "%d à revoir",
+        .resultYourCharacters: "Tes caractères",
         .resultReviewHeading: "Révision",
         .resultReviewRecovered: "%d / %d récupérés",
         .resultReviewStill: "Encore %d à revoir",
@@ -260,13 +331,30 @@ private let translations: [Language: [LKey: String]] = [
         .mpStart: "Commencer",
         .mpNext: "Suivant",
         .mpTie: "Égalité !",
-        .mpWinner: "Le Joueur %d gagne",
+        .mpWinner: "Le Joueur %d\ngagne",
         .mpRematch: "Revanche",
         .mpOutOf: "sur %d",
+        .mpTurnEnded: "Tour terminé",
+        .mpPassDevice: "Passe l'appareil au",
+        .mpStartTurn: "Commencer le tour du %@",
+        .mpChallengeDone: "Défi terminé",
+        .mpWinnerBadge: "GAGNANT",
 
         .settingsTitle: "Paramètres",
         .settingsLanguage: "Langue",
         .settingsDone: "Terminé",
+        .settingsScriptsHeader: "SYLLABAIRES",
+        .settingsMatchHeader: "PARTIE",
+        .settingsPrefsHeader: "PRÉFÉRENCES",
+        .settingsLanguageHeader: "LANGUE",
+        .settingsRoundsTitle: "Tours par manche",
+        .settingsRoundsSub: "Combien de caractères à dessiner",
+        .settingsRecoveryTitle: "Révisions des caractères ratés",
+        .settingsRecoverySub: "Fois pour mémoriser",
+        .settingsSounds: "Sons",
+        .settingsSoundsSub: "Retour audio",
+        .settingsHaptics: "Vibrations",
+        .settingsHapticsSub: "Retour haptique",
 
         .valWrite: "Écris",
         .valStrokesCount: "%d traits",
@@ -317,5 +405,11 @@ final class LanguageStore {
     /// Translate a key whose value contains printf-style placeholders (`%d`, `%@`, `%.3f`, ...).
     func tr(_ key: LKey, _ args: CVarArg...) -> String {
         String(format: tr(key), arguments: args)
+    }
+
+    /// Translate a key whose value contains a single `%@` placeholder, substituting a Swift
+    /// String. Needed because `String` does not conform to `CVarArg`.
+    func tr(_ key: LKey, string: String) -> String {
+        tr(key).replacingOccurrences(of: "%@", with: string)
     }
 }
