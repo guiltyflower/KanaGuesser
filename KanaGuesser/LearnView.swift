@@ -9,14 +9,20 @@ struct LearnView: View {
 
     private enum Phase {
         case initial
-        case retryReady(initialCorrect: Int, wrongs: [Kana])
+        case retryReady(initialCorrect: Int, wrongs: [Kana], results: [TurnResult])
         case retry(initialCorrect: Int)
-        case finished(initialCorrect: Int, retry: RetrySummary?)
+        case finished(initialCorrect: Int, retry: RetrySummary?, results: [TurnResult])
     }
 
     struct RetrySummary {
         let total: Int
         let stillWrong: Int
+    }
+
+    struct TurnResult: Identifiable {
+        let id = UUID()
+        let kana: Kana
+        let correct: Bool
     }
 
     @State private var sequence: [Kana]
@@ -43,15 +49,16 @@ struct LearnView: View {
             }
             .id(roundID)
 
-        case .retryReady(let initialCorrect, let wrongs):
-            RetryReadyView(
-                initialCorrect: initialCorrect,
+        case .retryReady(let initialCorrect, let wrongs, let results):
+            ResultsView(
+                phase: .roundCompleted(wrongCount: wrongs.count),
+                correct: initialCorrect,
                 total: Self.roundSize,
-                wrongCount: wrongs.count,
-                onExit: onExit,
-                onStart: { beginRetry(initialCorrect: initialCorrect, wrongs: wrongs) }
+                results: results,
+                primaryTitle: lang.tr(.retryReadyStart),
+                onPrimary: { beginRetry(initialCorrect: initialCorrect, wrongs: wrongs) },
+                onExit: onExit
             )
-            .padding(24)
 
         case .retry:
             GameRoundView(
@@ -63,35 +70,34 @@ struct LearnView: View {
             }
             .id(roundID)
 
-        case .finished(let initialCorrect, let retry):
+        case .finished(let initialCorrect, let retry, let results):
             ResultsView(
+                phase: .trainingDone(retry: retry),
                 correct: initialCorrect,
                 total: Self.roundSize,
-                retry: retry,
-                onNewRound: startNewRound,
+                results: results,
+                primaryTitle: lang.tr(.resultNewRound),
+                onPrimary: startNewRound,
                 onExit: onExit
             )
-            .padding(24)
         }
     }
 
     private func handleInitialFinish(correct: Int, outcomes: [Bool]) {
-        let wrongs: [Kana] = zip(sequence, outcomes).compactMap { $0.1 ? nil : $0.0 }
+        let results = zip(sequence, outcomes).map { TurnResult(kana: $0.0, correct: $0.1) }
+        let wrongs: [Kana] = results.compactMap { $0.correct ? nil : $0.kana }
         if wrongs.isEmpty {
             withAnimation(.spring(response: 0.4)) {
-                phase = .finished(initialCorrect: correct, retry: nil)
+                phase = .finished(initialCorrect: correct, retry: nil, results: results)
             }
         } else {
             withAnimation(.easeInOut(duration: 0.25)) {
-                phase = .retryReady(initialCorrect: correct, wrongs: wrongs)
+                phase = .retryReady(initialCorrect: correct, wrongs: wrongs, results: results)
             }
         }
     }
 
     private func beginRetry(initialCorrect: Int, wrongs: [Kana]) {
-        // Ripassiamo ogni kana sbagliato `retryRepeats` volte: N passate indipendentemente
-        // mescolate, concatenate. Se due passate confinano con lo stesso kana, scambiamo
-        // il primo elemento della seconda con il successivo per evitare doppioni immediati.
         var passes = (0..<Self.retryRepeats).map { _ in wrongs.shuffled() }
         var result: [Kana] = []
         for p in passes.indices {
@@ -112,19 +118,26 @@ struct LearnView: View {
     private func handleRetryFinish(outcomes: [Bool]) {
         guard case .retry(let initialCorrect) = phase else { return }
 
-        // Raggruppa gli esiti per kana, nell'ordine in cui sono apparsi nella sequenza.
         var perKana: [Kana: [Bool]] = [:]
         for (k, ok) in zip(sequence, outcomes) {
             perKana[k, default: []].append(ok)
         }
 
-        // Un kana è recuperato se: almeno 2 corretti su 3 E l'ultima risposta è giusta.
         let uniqueCount = perKana.count
         let recovered = perKana.values.filter(Self.isRecovered).count
 
+        // Build per-kana final result list for the summary grid.
+        var seen = Set<Kana>()
+        let results: [TurnResult] = sequence.compactMap { k in
+            guard !seen.contains(k) else { return nil }
+            seen.insert(k)
+            let ok = Self.isRecovered(perKana[k] ?? [])
+            return TurnResult(kana: k, correct: ok)
+        }
+
         let summary = RetrySummary(total: uniqueCount, stillWrong: uniqueCount - recovered)
         withAnimation(.spring(response: 0.4)) {
-            phase = .finished(initialCorrect: initialCorrect, retry: summary)
+            phase = .finished(initialCorrect: initialCorrect, retry: summary, results: results)
         }
     }
 
@@ -140,149 +153,207 @@ struct LearnView: View {
     }
 }
 
+// MARK: - Results screen
+
+enum ResultsPhase {
+    case roundCompleted(wrongCount: Int)
+    case trainingDone(retry: LearnView.RetrySummary?)
+}
+
 struct ResultsView: View {
+    let phase: ResultsPhase
     let correct: Int
     let total: Int
-    let retry: LearnView.RetrySummary?
-    let onNewRound: () -> Void
+    let results: [LearnView.TurnResult]
+    let primaryTitle: String
+    let onPrimary: () -> Void
     let onExit: () -> Void
 
     @Environment(LanguageStore.self) private var lang
 
     var body: some View {
-        let percent = total > 0 ? Int(Double(correct) / Double(total) * 100) : 0
-        let (emoji, title) = resultCopy(for: correct, total: total)
-        return VStack(spacing: 24) {
-            Spacer()
-            Text(emoji).font(.system(size: 96))
-            Text(title).font(.largeTitle.bold())
-            Text("\(correct) / \(total)  •  \(percent)%")
-                .font(.title2.monospacedDigit())
-                .foregroundStyle(.secondary)
-
-            if let retry {
-                retryCard(retry)
-                    .padding(.horizontal, 16)
-            }
-
-            VStack(spacing: 12) {
-                Button(action: onNewRound) {
-                    Label(lang.tr(.resultNewRound), systemImage: "arrow.clockwise")
-                        .font(.title3.bold())
-                        .frame(maxWidth: 320)
-                        .padding(.vertical, 6)
+        ScrollView {
+            VStack(spacing: 24) {
+                header
+                ScoreRing(correct: correct, total: total)
+                if !results.isEmpty {
+                    charactersGrid
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-
-                Button(action: onExit) {
-                    Label(lang.tr(.resultMenu), systemImage: "house")
-                        .font(.headline)
-                        .frame(maxWidth: 320)
-                        .padding(.vertical, 4)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
+                ctaStack
             }
-            .padding(.top, 8)
-
-            Spacer()
+            .padding(.horizontal, 24)
+            .padding(.top, 100)
+            .padding(.bottom, 40)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .overlay(alignment: .topLeading) {
+            PillIconButton(systemImage: "xmark", size: 36, iconSize: 13, action: onExit)
+                .padding(.leading, 16)
+                .padding(.top, 12)
+        }
     }
 
-    private func retryCard(_ retry: LearnView.RetrySummary) -> some View {
-        let recovered = retry.total - retry.stillWrong
-        return VStack(spacing: 6) {
-            Text(lang.tr(.resultReviewHeading))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(lang.tr(.resultReviewRecovered, recovered, retry.total))
-                .font(.headline.monospacedDigit())
-            if retry.stillWrong > 0 {
-                Text(lang.tr(.resultReviewStill, retry.stillWrong))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    @ViewBuilder
+    private var header: some View {
+        VStack(spacing: 8) {
+            KGLabel(text: headerLabel)
+            Text(heroText)
+                .font(KG.F.heroScore)
+                .tracking(-1)
+                .foregroundStyle(KG.C.textPrimary)
+                .multilineTextAlignment(.center)
+            if let sub = subtitle {
+                Text(sub)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(KG.C.textSecondary)
+            }
+        }
+    }
+
+    private var headerLabel: String {
+        switch phase {
+        case .roundCompleted: return lang.tr(.resultRoundCompleted)
+        case .trainingDone: return lang.tr(.resultTrainingDone)
+        }
+    }
+
+    private var heroText: String {
+        switch phase {
+        case .roundCompleted: return lang.tr(.resultScoreFraction, correct, total)
+        case .trainingDone: return lang.tr(.resultGreatJob)
+        }
+    }
+
+    private var subtitle: String? {
+        switch phase {
+        case .roundCompleted(let wrongs):
+            if wrongs == 0 { return lang.tr(.resultPerfect) }
+            return wrongs == 1
+                ? lang.tr(.resultReviewOneToGo)
+                : lang.tr(.resultReviewManyToGo, wrongs)
+        case .trainingDone(let retry):
+            guard let retry else { return nil }
+            let rec = retry.total - retry.stillWrong
+            return lang.tr(.resultReviewRecovered, rec, retry.total)
+        }
+    }
+
+    private var charactersGrid: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            KGLabel(text: lang.tr(.resultYourCharacters))
+                .padding(.horizontal, 6)
+
+            let cols = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+            LazyVGrid(columns: cols, spacing: 8) {
+                ForEach(results) { r in
+                    CharacterCell(kana: r.kana, correct: r.correct)
+                }
             }
         }
         .padding(14)
-        .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.tertiarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(KG.C.card)
         )
+        .kgCardShadow()
     }
 
-    private func resultCopy(for score: Int, total: Int) -> (String, String) {
-        switch score {
-        case total: return ("🎉", lang.tr(.resultPerfect))
-        case (total - 2)...: return ("🔥", lang.tr(.resultGreat))
-        case (total / 2)...: return ("👍", lang.tr(.resultGood))
-        default: return ("💪", lang.tr(.resultKeepGoing))
+    private var ctaStack: some View {
+        VStack(spacing: 10) {
+            KGButton(variant: .primary, action: onPrimary) {
+                Text(primaryTitle)
+            }
+            KGButton(variant: .secondary, action: onExit) {
+                Text(lang.tr(.resultMenu))
+            }
         }
     }
 }
 
-private struct RetryReadyView: View {
-    let initialCorrect: Int
-    let total: Int
-    let wrongCount: Int
-    let onExit: () -> Void
-    let onStart: () -> Void
+// MARK: - Character cell
 
-    @Environment(LanguageStore.self) private var lang
+struct CharacterCell: View {
+    let kana: Kana
+    let correct: Bool
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            VStack(spacing: 20) {
-                Spacer()
-
-                Text("📝").font(.system(size: 72))
-                Text(lang.tr(.resultReviewHeading))
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
-
-                VStack(spacing: 6) {
-                    Text(lang.tr(.retryReadyScore, initialCorrect, total))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(lang.tr(.retryReadyCount, wrongCount))
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 24)
-
-                Button(action: onStart) {
-                    Label(lang.tr(.retryReadyStart), systemImage: "play.fill")
-                        .font(.title3.bold())
-                        .frame(maxWidth: 320)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.top, 8)
-
-                Spacer()
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 2) {
+                Text(kana.character)
+                    .font(KG.F.kanaDisplay(size: 28))
+                    .foregroundStyle(KG.C.textPrimary)
+                Text(kana.romaji)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(KG.C.textSecondary)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
             .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(correct ? KG.C.successBg : KG.C.dangerBg)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(correct ? KG.C.successBrd : KG.C.dangerBrd, lineWidth: 1)
             )
 
-            Button(action: onExit) {
-                Image(systemName: "xmark")
-                    .font(.subheadline.weight(.bold))
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color(.tertiarySystemFill)))
-                    .foregroundStyle(.primary)
+            ZStack {
+                Circle()
+                    .fill(correct ? KG.C.successSoft : KG.C.danger)
+                    .frame(width: 14, height: 14)
+                Image(systemName: correct ? "checkmark" : "xmark")
+                    .font(.system(size: 7, weight: .heavy))
+                    .foregroundStyle(.white)
             }
-            .buttonStyle(.plain)
-            .padding(16)
+            .padding(4)
+        }
+    }
+}
+
+// MARK: - Score ring
+
+struct ScoreRing: View {
+    let correct: Int
+    let total: Int
+
+    @State private var animatedPct: Double = 0
+
+    private var pct: Double {
+        total > 0 ? Double(correct) / Double(total) : 0
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(KG.C.ringBg, lineWidth: 12)
+
+            Circle()
+                .trim(from: 0, to: animatedPct)
+                .stroke(
+                    KG.C.successSoft,
+                    style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            VStack(spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text("\(Int(pct * 100))")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                        .tracking(-1)
+                        .foregroundStyle(KG.C.textPrimary)
+                    Text("%")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(KG.C.textTertiary)
+                }
+                Text("\(correct) / \(total)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(KG.C.textTertiary)
+            }
+        }
+        .frame(width: 140, height: 140)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5)) {
+                animatedPct = pct
+            }
         }
     }
 }

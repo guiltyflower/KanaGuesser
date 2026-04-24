@@ -1,8 +1,3 @@
-//
-//  ContentView.swift
-//  KanaGuesser
-//
-
 import SwiftUI
 
 enum AppMode {
@@ -18,7 +13,9 @@ struct ContentView: View {
     @Environment(PreferencesStore.self) private var prefs
 
     var body: some View {
-        Group {
+        ZStack {
+            KanaBackground()
+
             switch mode {
             case .menu:
                 MenuView(
@@ -32,14 +29,12 @@ struct ContentView: View {
                 MultiplayerView(scripts: prefs.selectedScripts) { mode = .menu }
             }
         }
-        .background(
-            Image("KanaBackground")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-        )
         .sheet(isPresented: $showSettings) {
             SettingsView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(KG.C.bgCreamDark)
+                .presentationCornerRadius(24)
         }
     }
 }
@@ -53,92 +48,123 @@ private struct MenuView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            VStack(spacing: 28) {
-                Spacer()
+            VStack(spacing: 0) {
+                Spacer().frame(height: 160)
 
-                VStack(spacing: 6) {
+                VStack(spacing: 10) {
                     Text("KanaGuesser")
-                        .font(.system(size: 42, weight: .heavy, design: .rounded))
+                        .font(KG.F.display)
+                        .tracking(-1.5)
+                        .foregroundStyle(KG.C.textPrimary)
                     Text(lang.tr(.menuSubtitle))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color(hex: 0x5A5A50))
                 }
 
-                VStack(spacing: 14) {
-                    modeButton(
+                Spacer().frame(height: 60)
+
+                VStack(spacing: 12) {
+                    ModeCard(
+                        icon: { LearnIcon() },
+                        iconBg: KG.C.blueBg,
                         title: lang.tr(.modeLearnTitle),
                         subtitle: lang.tr(.modeLearnSubtitle),
-                        system: "book.fill",
-                        tint: .accentColor,
                         action: onLearn
                     )
-
-                    modeButton(
+                    ModeCard(
+                        icon: { ChallengeIcon() },
+                        iconBg: KG.C.orangeBg,
                         title: lang.tr(.modeChallengeTitle),
                         subtitle: lang.tr(.modeChallengeSubtitle),
-                        system: "person.2.fill",
-                        tint: .orange,
                         action: onMultiplayer
                     )
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 24)
 
                 Spacer()
             }
-            .padding(24)
 
-            Button(action: onSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.title3)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(Color(.secondarySystemGroupedBackground)))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 12)
-            .padding(.trailing, 16)
-            .accessibilityLabel(lang.tr(.settingsTitle))
+            PillIconButton(systemImage: "gearshape.fill", action: onSettings)
+                .padding(.top, 12)
+                .padding(.trailing, 20)
+                .accessibilityLabel(lang.tr(.settingsTitle))
         }
     }
+}
 
-    private func modeButton(
-        title: String,
-        subtitle: String,
-        system: String,
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
+private struct ModeCard<Icon: View>: View {
+    @ViewBuilder let icon: () -> Icon
+    let iconBg: Color
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+
+    var body: some View {
         Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: system)
-                    .font(.title.bold())
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(tint.opacity(0.15)))
-                    .foregroundStyle(tint)
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(iconBg)
+                        .frame(width: 46, height: 46)
+                    icon()
+                }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.title3.bold())
-                        .foregroundStyle(.primary)
+                        .font(KG.F.cardTitle)
+                        .tracking(-0.3)
+                        .foregroundStyle(KG.C.textPrimary)
                     Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color(hex: 0x7A7A72))
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.headline)
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(KG.C.chevron)
             }
-            .padding(18)
+            .padding(EdgeInsets(top: 16, leading: 18, bottom: 16, trailing: 18))
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(KG.C.card)
             )
+            .kgCardShadow()
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Icons
+
+private struct LearnIcon: View {
+    var body: some View {
+        ZStack {
+            Image(systemName: "book.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [KG.C.blue, KG.C.blueLight],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+    }
+}
+
+private struct ChallengeIcon: View {
+    var body: some View {
+        Image(systemName: "person.2.fill")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [KG.C.orange, KG.C.orangeLite],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
     }
 }
 

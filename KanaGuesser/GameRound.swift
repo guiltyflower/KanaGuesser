@@ -22,200 +22,219 @@ struct GameRoundView: View {
     private var total: Int { kanaSequence.count }
 
     var body: some View {
-        GeometryReader { geo in
-            let isWide = geo.size.width > geo.size.height
-            Group {
-                if isWide {
-                    HStack(spacing: 24) {
-                        promptPane.frame(maxWidth: 360)
-                        canvasPane
-                    }
-                } else {
-                    VStack(spacing: 20) {
-                        promptPane
-                        canvasPane
-                    }
-                }
-            }
-            .padding(24)
-        }
-    }
-
-    private var promptPane: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            header
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(lang.tr(.gameDrawThe))
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                Text(current.script.rawValue)
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
-                    .foregroundStyle(current.script == .hiragana ? Color.pink : Color.blue)
-                Text(lang.tr(.gameConnector))
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                Text("\"\(current.romaji)\"")
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
-
-            if revealed {
-                revealCard
-                    .transition(.scale.combined(with: .opacity))
-            }
-
+        VStack(spacing: 18) {
+            topBar
+            progressSegments
+            promptCard
             Spacer(minLength: 0)
+            bottomArea
         }
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+        .padding(.bottom, 32)
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Button(action: onExit) {
-                    Image(systemName: "xmark")
-                        .font(.subheadline.weight(.bold))
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(Color(.tertiarySystemFill)))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
+    // MARK: - Top bar
 
-                if let playerLabel {
-                    Text(playerLabel)
-                        .font(.title2.bold())
-                } else {
-                    Text("KanaGuesser")
-                        .font(.title2.bold())
+    private var topBar: some View {
+        HStack(alignment: .center, spacing: 12) {
+            PillIconButton(systemImage: "xmark", size: 36, iconSize: 13, action: onExit)
+
+            VStack(spacing: 2) {
+                KGLabel(text: headerLabel, color: Color(hex: 0x7A7468))
+                HStack(spacing: 4) {
+                    Text("\(index + 1)")
+                        .font(.system(size: 17, weight: .heavy, design: .rounded))
+                        .tracking(-0.4)
+                        .foregroundStyle(KG.C.textPrimary)
+                    Text("/ \(total)")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(KG.C.textMuted)
                 }
-                Spacer()
-                Text("\(index + 1) / \(total)")
-                    .font(.headline.monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
-            progressBar
-            Text(lang.tr(.gameCorrectCount, correct))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+
+            Color.clear.frame(width: 36, height: 36)
         }
     }
 
-    private var progressBar: some View {
-        HStack(spacing: 3) {
+    private var headerLabel: String {
+        playerLabel ?? "KanaGuesser"
+    }
+
+    // MARK: - Progress segments
+
+    private var progressSegments: some View {
+        HStack(spacing: 4) {
             ForEach(0..<total, id: \.self) { i in
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(segmentColor(at: i))
-                    .frame(maxWidth: .infinity)
+                    .frame(height: 6)
             }
         }
-        .frame(height: 8)
+        .animation(.easeInOut(duration: 0.25), value: outcomes.count)
     }
 
     private func segmentColor(at i: Int) -> Color {
         if i < outcomes.count {
-            return outcomes[i] ? .green : .red
+            return outcomes[i] ? KG.C.successSoft : KG.C.danger
         }
-        return Color(.tertiarySystemFill)
+        if i == index { return KG.C.textPrimary.opacity(0.35) }
+        return KG.C.textPrimary.opacity(0.12)
     }
 
-    private var revealCard: some View {
-        VStack(spacing: 12) {
-            Text(lang.tr(.gameAnswer))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(current.character)
-                .font(.system(size: 140, weight: .regular))
-            HStack(spacing: 12) {
-                Button {
-                    grade(correct: false)
-                } label: {
-                    Label(lang.tr(.gameWrong), systemImage: "xmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
+    // MARK: - Prompt card
 
-                Button {
-                    grade(correct: true)
-                } label: {
-                    Label(lang.tr(.gameRight), systemImage: "checkmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-            }
-            .controlSize(.large)
+    private var promptCard: some View {
+        VStack(spacing: 8) {
+            KGLabel(text: lang.tr(.gameDrawChar))
+            Text(current.romaji)
+                .font(KG.F.romaji)
+                .tracking(-2)
+                .foregroundStyle(KG.C.textPrimary)
+            Text(current.script.label)
+                .font(KG.F.caption)
+                .foregroundStyle(KG.C.textMuted)
         }
-        .padding(20)
         .frame(maxWidth: .infinity)
+        .padding(EdgeInsets(top: 20, leading: 20, bottom: 22, trailing: 20))
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(KG.C.card)
         )
+        .kgCardShadow(lifted: true)
     }
 
-    private var canvasPane: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color(.separator), lineWidth: 1)
+    // MARK: - Bottom (draw or reveal)
 
-                GeometryReader { g in
-                    Path { path in
-                        path.move(to: CGPoint(x: g.size.width / 2, y: 0))
-                        path.addLine(to: CGPoint(x: g.size.width / 2, y: g.size.height))
-                        path.move(to: CGPoint(x: 0, y: g.size.height / 2))
-                        path.addLine(to: CGPoint(x: g.size.width, y: g.size.height / 2))
-                    }
-                    .stroke(Color(.separator).opacity(0.5),
-                            style: StrokeStyle(lineWidth: 1, dash: [6, 6]))
-                }
-                .padding(16)
-
-                DrawingCanvas(drawing: $drawing)
-                    .padding(16)
-                    .id(index)
+    private var bottomArea: some View {
+        VStack(spacing: 14) {
+            if !revealed {
+                drawPanel
+                drawButtons
+            } else {
+                revealPanel
+                revealButtons
             }
-
-            HStack(spacing: 12) {
-                Button {
-                    drawing = PKDrawing()
-                } label: {
-                    Label(lang.tr(.gameClear), systemImage: "eraser")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
-                if !revealed {
-                    Button {
-                        withAnimation(.spring(response: 0.35)) { revealed = true }
-                    } label: {
-                        Label(lang.tr(.gameShowAnswer), systemImage: "eye")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .controlSize(.large)
         }
+    }
+
+    private var drawPanel: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(KG.C.card)
+                .kgCardShadow(lifted: true)
+
+            // Dashed guide cross
+            GeometryReader { g in
+                Path { path in
+                    path.move(to: CGPoint(x: g.size.width / 2, y: 12))
+                    path.addLine(to: CGPoint(x: g.size.width / 2, y: g.size.height - 12))
+                    path.move(to: CGPoint(x: 12, y: g.size.height / 2))
+                    path.addLine(to: CGPoint(x: g.size.width - 12, y: g.size.height / 2))
+                }
+                .stroke(KG.C.guideLine,
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 6]))
+            }
+            .allowsHitTesting(false)
+
+            DrawingCanvas(drawing: $drawing)
+                .padding(12)
+                .id(index)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: 340)
+    }
+
+    private var drawButtons: some View {
+        HStack(spacing: 10) {
+            KGButton(variant: .secondary, disabled: drawing.strokes.isEmpty) {
+                drawing = PKDrawing()
+            } content: {
+                Image(systemName: "trash")
+                    .font(.system(size: 15, weight: .semibold))
+                Text(lang.tr(.gameClear))
+            }
+
+            KGButton(variant: .primary, disabled: drawing.strokes.isEmpty) {
+                withAnimation(.spring(response: 0.35)) { revealed = true }
+            } content: {
+                Image(systemName: "eye")
+                    .font(.system(size: 15, weight: .semibold))
+                Text(lang.tr(.gameShowAnswer))
+            }
+        }
+        .frame(maxWidth: 340)
+    }
+
+    private var revealPanel: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(KG.C.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                )
+                .kgCardShadow(lifted: true)
+
+            VStack(spacing: 0) {
+                KGLabel(text: lang.tr(.gameAnswer))
+                    .padding(.top, 14)
+                Spacer(minLength: 0)
+                Text(current.character)
+                    .font(KG.F.kanaDisplay(size: 180))
+                    .foregroundStyle(KG.C.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                Spacer(minLength: 0)
+                Text(current.romaji)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(KG.C.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(KG.C.bgCream)
+                    )
+                    .padding(.bottom, 16)
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: 340)
+        .transition(.scale(scale: 0.9).combined(with: .opacity))
+    }
+
+    private var revealButtons: some View {
+        HStack(spacing: 10) {
+            KGButton(variant: .danger) {
+                grade(correct: false)
+            } content: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .bold))
+                Text(lang.tr(.gameWrong))
+            }
+
+            KGButton(variant: .success) {
+                grade(correct: true)
+            } content: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold))
+                Text(lang.tr(.gameRight))
+            }
+        }
+        .frame(maxWidth: 340)
     }
 
     private func grade(correct wasCorrect: Bool) {
         outcomes.append(wasCorrect)
         if wasCorrect { correct += 1 }
         drawing = PKDrawing()
-        revealed = false
         if index + 1 >= total {
             onFinished(correct, outcomes)
         } else {
-            index += 1
+            withAnimation(.easeInOut(duration: 0.22)) {
+                index += 1
+                revealed = false
+            }
         }
     }
 }
