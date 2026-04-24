@@ -40,6 +40,12 @@ enum LKey: String {
     case modeLearnSubtitle
     case modeChallengeTitle
     case modeChallengeSubtitle
+    case modeCheatsheetTitle
+    case modeCheatsheetSubtitle
+
+    // Cheatsheet
+    case cheatsheetTitle
+    case cheatsheetSubtitle
 
     // Game round
     case gameDrawChar           // "Disegna il carattere" — uppercase card label
@@ -131,6 +137,11 @@ private let translations: [Language: [LKey: String]] = [
         .modeLearnSubtitle: "Allenati da solo",
         .modeChallengeTitle: "Sfida",
         .modeChallengeSubtitle: "2 giocatori a turni",
+        .modeCheatsheetTitle: "CheatSheet",
+        .modeCheatsheetSubtitle: "Consulta tutti i kana",
+
+        .cheatsheetTitle: "CheatSheet",
+        .cheatsheetSubtitle: "Tocca un kana per vederlo in grande",
 
         .gameDrawChar: "Disegna il carattere",
         .gameAnswer: "Risposta corretta",
@@ -213,6 +224,11 @@ private let translations: [Language: [LKey: String]] = [
         .modeLearnSubtitle: "Practice solo",
         .modeChallengeTitle: "Challenge",
         .modeChallengeSubtitle: "2 players, taking turns",
+        .modeCheatsheetTitle: "CheatSheet",
+        .modeCheatsheetSubtitle: "Browse every kana",
+
+        .cheatsheetTitle: "CheatSheet",
+        .cheatsheetSubtitle: "Tap a kana to see it larger",
 
         .gameDrawChar: "Draw the character",
         .gameAnswer: "Correct answer",
@@ -295,6 +311,11 @@ private let translations: [Language: [LKey: String]] = [
         .modeLearnSubtitle: "Entraîne-toi seul",
         .modeChallengeTitle: "Défi",
         .modeChallengeSubtitle: "2 joueurs, à tour de rôle",
+        .modeCheatsheetTitle: "CheatSheet",
+        .modeCheatsheetSubtitle: "Consulte tous les kana",
+
+        .cheatsheetTitle: "CheatSheet",
+        .cheatsheetSubtitle: "Touche un kana pour l'agrandir",
 
         .gameDrawChar: "Dessine le caractère",
         .gameAnswer: "Bonne réponse",

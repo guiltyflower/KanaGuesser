@@ -4,6 +4,7 @@ enum AppMode {
     case menu
     case learn
     case multiplayer
+    case cheatsheet
 }
 
 struct ContentView: View {
@@ -21,12 +22,15 @@ struct ContentView: View {
                 MenuView(
                     onLearn: { mode = .learn },
                     onMultiplayer: { mode = .multiplayer },
+                    onCheatsheet: { mode = .cheatsheet },
                     onSettings: { showSettings = true }
                 )
             case .learn:
                 LearnView(scripts: prefs.selectedScripts) { mode = .menu }
             case .multiplayer:
                 MultiplayerView(scripts: prefs.selectedScripts) { mode = .menu }
+            case .cheatsheet:
+                CheatsheetView(scripts: prefs.selectedScripts) { mode = .menu }
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -42,6 +46,7 @@ struct ContentView: View {
 private struct MenuView: View {
     let onLearn: () -> Void
     let onMultiplayer: () -> Void
+    let onCheatsheet: () -> Void
     let onSettings: () -> Void
 
     @Environment(LanguageStore.self) private var lang
@@ -77,6 +82,14 @@ private struct MenuView: View {
                         title: lang.tr(.modeChallengeTitle),
                         subtitle: lang.tr(.modeChallengeSubtitle),
                         action: onMultiplayer
+                    )
+
+                    modeButton(
+                        title: lang.tr(.modeCheatsheetTitle),
+                        subtitle: lang.tr(.modeCheatsheetSubtitle),
+                        system: "tablecells.fill",
+                        tint: .green,
+                        action: onCheatsheet
                     )
                 }
                 .padding(.horizontal, 24)
