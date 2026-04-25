@@ -26,9 +26,16 @@ struct ContentView: View {
                     onSettings: { showSettings = true }
                 )
             case .learn:
-                LearnView(scripts: prefs.selectedScripts) { mode = .menu }
+                LearnView(
+                    scripts: prefs.selectedScripts,
+                    rounds: prefs.rounds,
+                    recoveryPasses: prefs.recoveryPasses
+                ) { mode = .menu }
             case .multiplayer:
-                MultiplayerView(scripts: prefs.selectedScripts) { mode = .menu }
+                MultiplayerView(
+                    scripts: prefs.selectedScripts,
+                    rounds: prefs.rounds
+                ) { mode = .menu }
             case .cheatsheet:
                 CheatsheetView(scripts: prefs.selectedScripts) { mode = .menu }
             }
@@ -83,12 +90,11 @@ private struct MenuView: View {
                         subtitle: lang.tr(.modeChallengeSubtitle),
                         action: onMultiplayer
                     )
-
-                    modeButton(
+                    ModeCard(
+                        icon: { CheatsheetIcon() },
+                        iconBg: KG.C.successBg,
                         title: lang.tr(.modeCheatsheetTitle),
                         subtitle: lang.tr(.modeCheatsheetSubtitle),
-                        system: "tablecells.fill",
-                        tint: .green,
                         action: onCheatsheet
                     )
                 }
@@ -174,6 +180,20 @@ private struct ChallengeIcon: View {
             .foregroundStyle(
                 LinearGradient(
                     colors: [KG.C.orange, KG.C.orangeLite],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+    }
+}
+
+private struct CheatsheetIcon: View {
+    var body: some View {
+        Image(systemName: "tablecells.fill")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [KG.C.success, KG.C.successSoft],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )

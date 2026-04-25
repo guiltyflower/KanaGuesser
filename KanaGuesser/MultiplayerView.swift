@@ -2,9 +2,8 @@ import SwiftUI
 
 struct MultiplayerView: View {
     let scripts: Set<Script>
+    let rounds: Int
     let onExit: () -> Void
-
-    static let roundSize = 10
 
     private enum Phase {
         case ready(player: Int, previousScore: Int?)
@@ -18,10 +17,11 @@ struct MultiplayerView: View {
 
     @Environment(LanguageStore.self) private var lang
 
-    init(scripts: Set<Script>, onExit: @escaping () -> Void) {
+    init(scripts: Set<Script>, rounds: Int, onExit: @escaping () -> Void) {
         self.scripts = scripts
+        self.rounds = rounds
         self.onExit = onExit
-        _sequence = State(initialValue: KanaSequenceBuilder.make(scripts: scripts, count: Self.roundSize))
+        _sequence = State(initialValue: KanaSequenceBuilder.make(scripts: scripts, count: rounds))
     }
 
     var body: some View {
@@ -30,10 +30,10 @@ struct MultiplayerView: View {
             MultiplayerReadyView(
                 player: player,
                 previousScore: previousScore,
-                total: Self.roundSize,
+                total: rounds,
                 onExit: onExit,
                 onStart: {
-                    sequence = KanaSequenceBuilder.make(scripts: scripts, count: Self.roundSize)
+                    sequence = KanaSequenceBuilder.make(scripts: scripts, count: rounds)
                     roundID = UUID()
                     withAnimation(.easeInOut(duration: 0.25)) {
                         phase = .playing(
@@ -64,7 +64,7 @@ struct MultiplayerView: View {
             ChallengeFinalView(
                 player1Score: p1,
                 player2Score: p2,
-                total: Self.roundSize,
+                total: rounds,
                 onRematch: startRematch,
                 onExit: onExit
             )
@@ -72,7 +72,7 @@ struct MultiplayerView: View {
     }
 
     private func startRematch() {
-        sequence = KanaSequenceBuilder.make(scripts: scripts, count: Self.roundSize)
+        sequence = KanaSequenceBuilder.make(scripts: scripts, count: rounds)
         roundID = UUID()
         phase = .ready(player: 1, previousScore: nil)
     }

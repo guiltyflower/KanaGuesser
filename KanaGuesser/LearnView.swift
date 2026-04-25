@@ -2,10 +2,9 @@ import SwiftUI
 
 struct LearnView: View {
     let scripts: Set<Script>
+    let rounds: Int
+    let recoveryPasses: Int
     let onExit: () -> Void
-
-    static let roundSize = 10
-    static let retryRepeats = 3
 
     private enum Phase {
         case initial
@@ -31,10 +30,12 @@ struct LearnView: View {
 
     @Environment(LanguageStore.self) private var lang
 
-    init(scripts: Set<Script>, onExit: @escaping () -> Void) {
+    init(scripts: Set<Script>, rounds: Int, recoveryPasses: Int, onExit: @escaping () -> Void) {
         self.scripts = scripts
+        self.rounds = rounds
+        self.recoveryPasses = recoveryPasses
         self.onExit = onExit
-        _sequence = State(initialValue: KanaSequenceBuilder.make(scripts: scripts, count: Self.roundSize))
+        _sequence = State(initialValue: KanaSequenceBuilder.make(scripts: scripts, count: rounds))
     }
 
     var body: some View {
@@ -53,7 +54,7 @@ struct LearnView: View {
             ResultsView(
                 phase: .roundCompleted(wrongCount: wrongs.count),
                 correct: initialCorrect,
-                total: Self.roundSize,
+                total: rounds,
                 results: results,
                 primaryTitle: lang.tr(.retryReadyStart),
                 onPrimary: { beginRetry(initialCorrect: initialCorrect, wrongs: wrongs) },
@@ -74,7 +75,7 @@ struct LearnView: View {
             ResultsView(
                 phase: .trainingDone(retry: retry),
                 correct: initialCorrect,
-                total: Self.roundSize,
+                total: rounds,
                 results: results,
                 primaryTitle: lang.tr(.resultNewRound),
                 onPrimary: startNewRound,
@@ -98,7 +99,7 @@ struct LearnView: View {
     }
 
     private func beginRetry(initialCorrect: Int, wrongs: [Kana]) {
-        var passes = (0..<Self.retryRepeats).map { _ in wrongs.shuffled() }
+        var passes = (0..<recoveryPasses).map { _ in wrongs.shuffled() }
         var result: [Kana] = []
         for p in passes.indices {
             if let last = result.last,
@@ -147,7 +148,7 @@ struct LearnView: View {
     }
 
     private func startNewRound() {
-        sequence = KanaSequenceBuilder.make(scripts: scripts, count: Self.roundSize)
+        sequence = KanaSequenceBuilder.make(scripts: scripts, count: rounds)
         roundID = UUID()
         phase = .initial
     }
