@@ -61,7 +61,7 @@ enum KG {
 
         /// Glyph display font for kana — system serif falls back to Hiragino/Noto Serif JP on iOS.
         static func kanaDisplay(size: CGFloat) -> Font {
-            .system(size: size, weight: .semibold, design: .serif)
+            .system(size: size, weight: .semibold, design: .rounded)
         }
     }
 }

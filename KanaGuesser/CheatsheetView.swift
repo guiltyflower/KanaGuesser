@@ -7,7 +7,10 @@ struct CheatsheetView: View {
     @Environment(LanguageStore.self) private var lang
     @State private var focused: Kana?
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 5)
+    /// Gojuon group sizes in display order: a, ka, sa, ta, na, ha, ma, ya, ra, wa, n.
+    /// Groups of size 5 form a single row; smaller groups place each character on its own row.
+    private static let groupSizes = [5, 5, 5, 5, 5, 5, 5, 3, 5, 2, 1]
+    private static let columnCount = 5
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -49,23 +52,62 @@ struct CheatsheetView: View {
     }
 
     private func section(title: String, kanas: [Kana]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let rows = Self.gojuonRows(from: kanas)
+        return VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.secondary)
                 .padding(.leading, 4)
 
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(kanas) { kana in
-                    Button {
-                        focused = kana
-                    } label: {
-                        cell(for: kana)
-                    }
-                    .buttonStyle(.plain)
+            VStack(spacing: 10) {
+                ForEach(rows.indices, id: \.self) { i in
+                    row(rows[i])
                 }
             }
         }
+    }
+
+    private func row(_ kanas: [Kana]) -> some View {
+        HStack(spacing: 10) {
+            ForEach(0..<Self.columnCount, id: \.self) { col in
+                slot(at: col, in: kanas)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func slot(at col: Int, in kanas: [Kana]) -> some View {
+        if let kana = Self.kana(at: col, in: kanas) {
+            Button {
+                focused = kana
+            } label: {
+                cell(for: kana)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Color.clear
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// Place the row's chars centered across the 5 columns. A row of N occupies
+    /// columns [start, start+N) where `start = (5 - N) / 2`.
+    private static func kana(at col: Int, in row: [Kana]) -> Kana? {
+        let start = (columnCount - row.count) / 2
+        let offset = col - start
+        guard offset >= 0, offset < row.count else { return nil }
+        return row[offset]
+    }
+
+    private static func gojuonRows(from kanas: [Kana]) -> [[Kana]] {
+        var rows: [[Kana]] = []
+        var idx = 0
+        for size in groupSizes {
+            let end = min(idx + size, kanas.count)
+            rows.append(Array(kanas[idx..<end]))
+            idx = end
+        }
+        return rows
     }
 
     private func cell(for kana: Kana) -> some View {
