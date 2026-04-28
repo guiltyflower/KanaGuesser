@@ -34,7 +34,6 @@ enum Language: String, CaseIterable, Identifiable, Hashable {
 /// All user-facing strings live in this enum. Add here, then translate in `translations`.
 enum LKey: String {
     // Menu
-    case menuSubtitle
     case menuAlphabets
     case modeLearnTitle
     case modeLearnSubtitle
@@ -111,6 +110,36 @@ enum LKey: String {
     case settingsHaptics
     case settingsHapticsSub
 
+    // Stats
+    case statsHeader            // uppercase "STATISTICHE"
+    case statsKanaHeader        // uppercase "KANA"
+    case statsSummaryTitle      // "Totale"
+    case statsSummarySub        // "%d partite · %d%% giusti"
+    case statsModeTitle         // "%d domande"
+    case statsModeSub           // "%d partite · %.1f media · %d miglior"
+    case statsNoData            // "Gioca qualche partita per vedere le statistiche"
+    case statsReset             // "Reset statistiche"
+    case statsResetConfirm      // "Cancellare tutte le statistiche?"
+    case statsResetCancel       // "Annulla"
+    case statsHardest           // "Da ripassare"
+    case statsMastered          // "Padroneggiati"
+    case statsAccuracyShort     // "%d%%"
+    case statsScriptsTitle      // "Per sillabario"
+    case statsScriptsSub        // "Hiragana %d%% · Katakana %d%%"
+    case statsDailyTitle        // "Streak giornaliero"
+    case statsDailySub          // "%d giorni · miglior %d"
+    case statsDailyLast         // "ultima %@"
+    case statsLastToday         // "oggi"
+    case statsLastYesterday     // "ieri"
+    case statsLastDaysAgo       // "%d giorni fa"
+    case statsPerfectTitle      // "Perfetti di fila"
+    case statsPerfectSub        // "%d corrente · miglior %d"
+    case statsRecoveryTitle     // "Recupero ripasso"
+    case statsRecoverySub       // "%d / %d (%d%%)"
+    case statsKanaButton        // "Statistiche per kana" (settings row → opens KanaStatsView)
+    case kanaStatsTitle         // page title
+    case kanaStatsSubtitle      // page subtitle
+
     // Validation demo
     case valWrite
     case valStrokesCount        // "%d tratti"
@@ -131,7 +160,6 @@ enum LKey: String {
 private let translations: [Language: [LKey: String]] = [
 
     .italian: [
-        .menuSubtitle: "Scegli una modalità",
         .menuAlphabets: "Alfabeti",
         .modeLearnTitle: "Impara",
         .modeLearnSubtitle: "Allenati da solo",
@@ -203,6 +231,35 @@ private let translations: [Language: [LKey: String]] = [
         .settingsHaptics: "Vibrazione",
         .settingsHapticsSub: "Feedback aptico",
 
+        .statsHeader: "STATISTICHE",
+        .statsKanaHeader: "KANA",
+        .statsSummaryTitle: "Totale",
+        .statsSummarySub: "%d partite · %d%% giusti",
+        .statsModeTitle: "%d domande",
+        .statsModeSub: "%d partite · %.1f media · %d miglior",
+        .statsNoData: "Gioca qualche partita per vedere le statistiche",
+        .statsReset: "Reset statistiche",
+        .statsResetConfirm: "Cancellare tutte le statistiche?",
+        .statsResetCancel: "Annulla",
+        .statsHardest: "Da ripassare",
+        .statsMastered: "Padroneggiati",
+        .statsAccuracyShort: "%d%%",
+        .statsScriptsTitle: "Per sillabario",
+        .statsScriptsSub: "Hiragana %d%% · Katakana %d%%",
+        .statsDailyTitle: "Streak giornaliero",
+        .statsDailySub: "%d giorni · miglior %d",
+        .statsDailyLast: "ultima %@",
+        .statsLastToday: "oggi",
+        .statsLastYesterday: "ieri",
+        .statsLastDaysAgo: "%d giorni fa",
+        .statsPerfectTitle: "Perfetti di fila",
+        .statsPerfectSub: "%d corrente · miglior %d",
+        .statsRecoveryTitle: "Recupero ripasso",
+        .statsRecoverySub: "%d / %d (%d%%)",
+        .statsKanaButton: "Statistiche per kana",
+        .kanaStatsTitle: "Statistiche per kana",
+        .kanaStatsSubtitle: "Accuratezza per ogni carattere",
+
         .valWrite: "Scrivi",
         .valStrokesCount: "%d tratti",
         .valCheck: "Verifica",
@@ -218,7 +275,6 @@ private let translations: [Language: [LKey: String]] = [
     ],
 
     .english: [
-        .menuSubtitle: "Choose a mode",
         .menuAlphabets: "Alphabets",
         .modeLearnTitle: "Learn",
         .modeLearnSubtitle: "Practice solo",
@@ -290,6 +346,35 @@ private let translations: [Language: [LKey: String]] = [
         .settingsHaptics: "Haptics",
         .settingsHapticsSub: "Haptic feedback",
 
+        .statsHeader: "STATS",
+        .statsKanaHeader: "KANA",
+        .statsSummaryTitle: "Total",
+        .statsSummarySub: "%d games · %d%% correct",
+        .statsModeTitle: "%d questions",
+        .statsModeSub: "%d games · %.1f avg · %d best",
+        .statsNoData: "Play a few games to see your stats",
+        .statsReset: "Reset stats",
+        .statsResetConfirm: "Erase all stats?",
+        .statsResetCancel: "Cancel",
+        .statsHardest: "To review",
+        .statsMastered: "Mastered",
+        .statsAccuracyShort: "%d%%",
+        .statsScriptsTitle: "By script",
+        .statsScriptsSub: "Hiragana %d%% · Katakana %d%%",
+        .statsDailyTitle: "Daily streak",
+        .statsDailySub: "%d days · best %d",
+        .statsDailyLast: "last %@",
+        .statsLastToday: "today",
+        .statsLastYesterday: "yesterday",
+        .statsLastDaysAgo: "%d days ago",
+        .statsPerfectTitle: "Perfect streak",
+        .statsPerfectSub: "%d current · best %d",
+        .statsRecoveryTitle: "Review recovery",
+        .statsRecoverySub: "%d / %d (%d%%)",
+        .statsKanaButton: "Per-kana stats",
+        .kanaStatsTitle: "Per-kana stats",
+        .kanaStatsSubtitle: "Accuracy per character",
+
         .valWrite: "Write",
         .valStrokesCount: "%d strokes",
         .valCheck: "Check",
@@ -305,7 +390,6 @@ private let translations: [Language: [LKey: String]] = [
     ],
 
     .french: [
-        .menuSubtitle: "Choisis un mode",
         .menuAlphabets: "Alphabets",
         .modeLearnTitle: "Apprendre",
         .modeLearnSubtitle: "Entraîne-toi seul",
@@ -376,6 +460,35 @@ private let translations: [Language: [LKey: String]] = [
         .settingsSoundsSub: "Retour audio",
         .settingsHaptics: "Vibrations",
         .settingsHapticsSub: "Retour haptique",
+
+        .statsHeader: "STATISTIQUES",
+        .statsKanaHeader: "KANA",
+        .statsSummaryTitle: "Total",
+        .statsSummarySub: "%d parties · %d%% justes",
+        .statsModeTitle: "%d questions",
+        .statsModeSub: "%d parties · %.1f moy · %d meilleur",
+        .statsNoData: "Joue quelques parties pour voir tes statistiques",
+        .statsReset: "Réinitialiser les statistiques",
+        .statsResetConfirm: "Effacer toutes les statistiques ?",
+        .statsResetCancel: "Annuler",
+        .statsHardest: "À réviser",
+        .statsMastered: "Maîtrisés",
+        .statsAccuracyShort: "%d%%",
+        .statsScriptsTitle: "Par syllabaire",
+        .statsScriptsSub: "Hiragana %d%% · Katakana %d%%",
+        .statsDailyTitle: "Série quotidienne",
+        .statsDailySub: "%d jours · meilleure %d",
+        .statsDailyLast: "dernière %@",
+        .statsLastToday: "aujourd'hui",
+        .statsLastYesterday: "hier",
+        .statsLastDaysAgo: "il y a %d jours",
+        .statsPerfectTitle: "Parties parfaites d'affilée",
+        .statsPerfectSub: "%d en cours · meilleure %d",
+        .statsRecoveryTitle: "Récupération révision",
+        .statsRecoverySub: "%d / %d (%d%%)",
+        .statsKanaButton: "Stats par kana",
+        .kanaStatsTitle: "Stats par kana",
+        .kanaStatsSubtitle: "Précision par caractère",
 
         .valWrite: "Écris",
         .valStrokesCount: "%d traits",

@@ -3,7 +3,11 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(LanguageStore.self) private var lang
     @Environment(PreferencesStore.self) private var prefs
+    @Environment(StatsStore.self) private var stats
     @Environment(\.dismiss) private var dismiss
+
+    @State private var showResetConfirm = false
+    @State private var showKanaStats = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -14,11 +18,20 @@ struct SettingsView: View {
                     header
                     scriptsSection
                     matchSection
+                    statsSection
+                    kanaStatsSection
                     languageSection
                 }
                 .padding(.top, 8)
                 .padding(.bottom, 40)
             }
+        }
+        .alert(lang.tr(.statsResetConfirm), isPresented: $showResetConfirm) {
+            Button(lang.tr(.statsResetCancel), role: .cancel) {}
+            Button(lang.tr(.statsReset), role: .destructive) { stats.resetAll() }
+        }
+        .sheet(isPresented: $showKanaStats) {
+            KanaStatsView(scripts: prefs.selectedScripts)
         }
     }
 
@@ -89,6 +102,179 @@ struct SettingsView: View {
                     ) { prefs.recoveryPasses = $0 }
                 )
             )
+        }
+    }
+
+    // MARK: - Stats
+
+    private var statsSection: some View {
+        SettingsSection(title: lang.tr(.statsHeader)) {
+            if stats.totalGames == 0 {
+                SettingRow(title: lang.tr(.statsNoData))
+            } else {
+                SettingRow(
+                    title: lang.tr(.statsSummaryTitle),
+                    subtitle: lang.tr(
+                        .statsSummarySub,
+                        stats.totalGames,
+                        Int((stats.overallAccuracy * 100).rounded())
+                    )
+                )
+                if let scriptsSub = scriptsAccuracySub() {
+                    SettingsDivider()
+                    SettingRow(title: lang.tr(.statsScriptsTitle), subtitle: scriptsSub)
+                }
+                if let last = stats.daily.lastSessionDate {
+                    SettingsDivider()
+                    let daysSub = lang.tr(.statsDailySub, stats.daily.current, stats.daily.best)
+                    let lastSub = lang.tr(.statsDailyLast, string: relativeLastSession(last))
+                    SettingRow(
+                        title: lang.tr(.statsDailyTitle),
+                        subtitle: "\(daysSub) · \(lastSub)"
+                    )
+                }
+                if stats.perfect.best > 0 || stats.perfect.current > 0 {
+                    SettingsDivider()
+                    SettingRow(
+                        title: lang.tr(.statsPerfectTitle),
+                        subtitle: lang.tr(.statsPerfectSub, stats.perfect.current, stats.perfect.best)
+                    )
+                }
+                if stats.retry.totalWrongs > 0 {
+                    SettingsDivider()
+                    SettingRow(
+                        title: lang.tr(.statsRecoveryTitle),
+                        subtitle: lang.tr(
+                            .statsRecoverySub,
+                            stats.retry.totalRecovered,
+                            stats.retry.totalWrongs,
+                            Int((stats.retry.rate * 100).rounded())
+                        )
+                    )
+                }
+                ForEach(stats.perMode.keys.sorted(), id: \.self) { rounds in
+                    if let m = stats.perMode[rounds] {
+                        SettingsDivider()
+                        SettingRow(
+                            title: lang.tr(.statsModeTitle, rounds),
+                            subtitle: lang.tr(
+                                .statsModeSub,
+                                m.gamesPlayed,
+                                m.averageCorrect,
+                                m.bestScore
+                            )
+                        )
+                    }
+                }
+                SettingsDivider()
+                Button { showKanaStats = true } label: {
+                    HStack(spacing: 12) {
+                        Text(lang.tr(.statsKanaButton))
+                            .font(KG.F.body)
+                            .foregroundStyle(KG.C.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(KG.C.chevron)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .frame(minHeight: 54)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                SettingsDivider()
+                Button { showResetConfirm = true } label: {
+                    HStack {
+                        Text(lang.tr(.statsReset))
+                            .font(KG.F.body)
+                            .foregroundStyle(KG.C.danger)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .frame(minHeight: 54)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func scriptsAccuracySub() -> String? {
+        let h = stats.accuracy(for: .hiragana)
+        let k = stats.accuracy(for: .katakana)
+        let hPct = Int((h.accuracy * 100).rounded())
+        let kPct = Int((k.accuracy * 100).rounded())
+        switch (h.seen > 0, k.seen > 0) {
+        case (true, true):
+            return lang.tr(.statsScriptsSub, hPct, kPct)
+        case (true, false):
+            return "Hiragana \(hPct)%"
+        case (false, true):
+            return "Katakana \(kPct)%"
+        case (false, false):
+            return nil
+        }
+    }
+
+    private func relativeLastSession(_ date: Date) -> String {
+        let cal = Calendar.current
+        let diff = cal.dateComponents([.day], from: cal.startOfDay(for: date), to: cal.startOfDay(for: Date())).day ?? 0
+        if diff <= 0 { return lang.tr(.statsLastToday) }
+        if diff == 1 { return lang.tr(.statsLastYesterday) }
+        return lang.tr(.statsLastDaysAgo, diff)
+    }
+
+    private var kanaStatsSection: some View {
+        let allKanas = KanaDatabase.all(for: prefs.selectedScripts)
+        let hardest = stats.sortedByAccuracy(among: allKanas, ascending: true, limit: 5)
+        let mastered = stats.sortedByAccuracy(among: allKanas, ascending: false, limit: 5)
+        return Group {
+            if !hardest.isEmpty || !mastered.isEmpty {
+                SettingsSection(title: lang.tr(.statsKanaHeader)) {
+                    if !hardest.isEmpty {
+                        kanaTopRow(title: lang.tr(.statsHardest), entries: hardest, tint: KG.C.danger)
+                    }
+                    if !hardest.isEmpty && !mastered.isEmpty {
+                        SettingsDivider()
+                    }
+                    if !mastered.isEmpty {
+                        kanaTopRow(title: lang.tr(.statsMastered), entries: mastered, tint: KG.C.success)
+                    }
+                }
+            }
+        }
+    }
+
+    private func kanaTopRow(title: String, entries: [(Kana, KanaStat)], tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(KG.C.textSecondary)
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+            HStack(spacing: 8) {
+                ForEach(Array(entries.enumerated()), id: \.offset) { _, item in
+                    let (kana, stat) = item
+                    VStack(spacing: 2) {
+                        Text(kana.character)
+                            .font(.system(size: 24, weight: .semibold, design: .rounded))
+                            .foregroundStyle(KG.C.textPrimary)
+                        Text(lang.tr(.statsAccuracyShort, Int((stat.accuracy * 100).rounded())))
+                            .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(tint)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(KG.C.bgCream)
+                    )
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 12)
         }
     }
 
@@ -283,4 +469,5 @@ private struct Stepper_: View {
     SettingsView()
         .environment(LanguageStore())
         .environment(PreferencesStore())
+        .environment(StatsStore())
 }

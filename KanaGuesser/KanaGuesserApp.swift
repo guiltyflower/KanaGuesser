@@ -11,12 +11,14 @@ import SwiftUI
 struct KanaGuesserApp: App {
     @State private var languageStore = LanguageStore()
     @State private var preferencesStore = PreferencesStore()
+    @State private var statsStore = StatsStore()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(languageStore)
                 .environment(preferencesStore)
+                .environment(statsStore)
         }
     }
 }

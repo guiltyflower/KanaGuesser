@@ -26,7 +26,7 @@ struct CheatsheetView: View {
                         section(title: Script.katakana.label, kanas: KanaDatabase.katakana)
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 28)
                 .padding(.top, 72)
                 .padding(.bottom, 24)
             }

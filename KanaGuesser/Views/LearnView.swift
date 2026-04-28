@@ -29,6 +29,7 @@ struct LearnView: View {
     @State private var roundID = UUID()
 
     @Environment(LanguageStore.self) private var lang
+    @Environment(StatsStore.self) private var stats
 
     init(scripts: Set<Script>, rounds: Int, recoveryPasses: Int, onExit: @escaping () -> Void) {
         self.scripts = scripts
@@ -85,9 +86,11 @@ struct LearnView: View {
     }
 
     private func handleInitialFinish(correct: Int, outcomes: [Bool]) {
+        stats.record(Array(zip(sequence, outcomes)))
         let results = zip(sequence, outcomes).map { TurnResult(kana: $0.0, correct: $0.1) }
         let wrongs: [Kana] = results.compactMap { $0.correct ? nil : $0.kana }
         if wrongs.isEmpty {
+            stats.recordGame(rounds: rounds, correct: correct)
             withAnimation(.spring(response: 0.4)) {
                 phase = .finished(initialCorrect: correct, retry: nil, results: results)
             }
@@ -119,6 +122,8 @@ struct LearnView: View {
     private func handleRetryFinish(outcomes: [Bool]) {
         guard case .retry(let initialCorrect) = phase else { return }
 
+        // Per-kana stats only count the initial pass — retry would over-weight wrongs.
+
         var perKana: [Kana: [Bool]] = [:]
         for (k, ok) in zip(sequence, outcomes) {
             perKana[k, default: []].append(ok)
@@ -137,6 +142,8 @@ struct LearnView: View {
         }
 
         let summary = RetrySummary(total: uniqueCount, stillWrong: uniqueCount - recovered)
+        stats.recordRetry(wrongs: uniqueCount, recovered: recovered)
+        stats.recordGame(rounds: rounds, correct: initialCorrect)
         withAnimation(.spring(response: 0.4)) {
             phase = .finished(initialCorrect: initialCorrect, retry: summary, results: results)
         }

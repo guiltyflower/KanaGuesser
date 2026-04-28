@@ -63,15 +63,10 @@ private struct MenuView: View {
             VStack(spacing: 0) {
                 Spacer().frame(height: 160)
 
-                VStack(spacing: 10) {
-                    Text("KanaGuesser")
-                        .font(KG.F.display)
-                        .tracking(-1.5)
-                        .foregroundStyle(KG.C.textPrimary)
-                    Text(lang.tr(.menuSubtitle))
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x5A5A50))
-                }
+                Text("KanaGuesser")
+                    .font(KG.F.display)
+                    .tracking(-1.5)
+                    .foregroundStyle(KG.C.textPrimary)
 
                 Spacer().frame(height: 60)
 
